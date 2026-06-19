@@ -1,16 +1,16 @@
 # hash:sha256:6ceefde681fb5ad2ca41bca5b1ebdfc35ce9ce0f7acc50dc183706cc463f5d61
 ARG REGISTRY_HOST
-FROM $REGISTRY_HOST/codeocean/jupyterlab:3.6.1-miniconda4.12.0-python3.9-ubuntu20.04
+FROM $REGISTRY_HOST/codeocean/miniconda3:4.9.2-cuda11.7.0-cudnn8-ubuntu20.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# BEAST needs Python >=3.10; the base image ships 3.9.
+# BEAST needs Python >=3.10; this CUDA base ships an older Python.
 RUN conda install -y python=3.11 \
     && conda clean -ya
 
-# ffmpeg is required by `beast extract` / video I/O.
+# ffmpeg for `beast extract` / video I/O; libsm6/libxext6 for OpenCV.
 RUN apt-get update \
-    && apt-get install -y ffmpeg \
+    && apt-get install -y ffmpeg libsm6 libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
 # BEAST CLI (provides the `beast` entry point used by run_capsule.py).
