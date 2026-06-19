@@ -1,0 +1,47 @@
+# BEAST ResNet autoencoder config (compact 12-latent representation).
+# Copied from paninski-lab/beast configs/resnet_ae.yaml.
+# `data.data_dir` is overridden at runtime by run_capsule.py (`beast train -d ...`),
+# and num_epochs is overridden for the smoke test via --overrides.
+
+# model configuration
+model:
+  seed: 0
+  checkpoint: null
+  model_class: resnet
+  model_params:
+    backbone: resnet18
+    num_latents: 12
+    image_size: 224
+    num_channels: 3
+
+# training configuration
+training:
+  seed: 0
+  imgaug: default
+  train_batch_size: 512
+  val_batch_size: 1024
+  test_batch_size: 128
+  num_epochs: 800
+  num_workers: 8
+  num_gpus: 1
+  num_nodes: 1
+  log_every_n_steps: 10
+  check_val_every_n_epoch: 5
+
+# optimizer configuration
+optimizer:
+  type: AdamW
+  accumulate_grad_batches: 1
+  lr: 5.e-4
+  wd: 0.05
+  scheduler: cosine
+  warmup_pct: 0.15
+  div_factor: 10
+  gamma: 0.5
+  steps:
+    - 200
+    - 400
+
+# data configuration
+data:
+  data_dir: /root/capsule/data
