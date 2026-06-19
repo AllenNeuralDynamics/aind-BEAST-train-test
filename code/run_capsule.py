@@ -138,14 +138,36 @@ def count_frames(video: Path) -> int:
         return 0
 
 
-def prepare_extract_input(video: Path, input_dir: Path, max_frames: int) -> None:
+def count_keyframes(video: Path) -> int:
+    """Count video keyframes (I-frames) via ffprobe packet flags (demux only)."""
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "packet=flags", "-of", "csv=p=0", str(video)],
+            capture_output=True, text=True, check=True,
+        ).stdout
+        return sum(1 for line in out.splitlines() if line.startswith("K"))
+    except subprocess.CalledProcessError:
+        return 0
+
+
+def prepare_extract_input(
+    video: Path, input_dir: Path, max_frames: int, min_candidates: int,
+) -> None:
     """Stage the video for `beast extract`.
 
-    Short videos are symlinked. Long videos are temporally decimated to roughly
-    ``max_frames`` frames first: BEAST's pca_kmeans loads every (downsampled)
-    frame into RAM, so a multi-million-frame video OOM-kills the extract step.
-    Decimation only affects which frames are *candidates* for the training set;
-    inference still runs on the full-resolution original video.
+    Short videos are symlinked. Long videos are decimated to a bounded candidate
+    pool first: BEAST's pca_kmeans loads every (downsampled) frame into RAM, so a
+    multi-million-frame video OOM-kills the extract step. Decimation only affects
+    which frames are *candidates* for the training set; inference still runs on
+    the full-resolution original video.
+
+    Two decimation strategies:
+    - keyframe-only decode (`-skip_frame nokey`): fast (inter-frames are never
+      decoded), used when the video has a usable number of keyframes. This is the
+      common case for H.264/GOP video.
+    - every-Nth full decode (`select`): fallback for all-intra codecs (e.g.
+      `.mj2`, where keyframes ~= all frames) and sparse-/short-GOP video.
     """
     total = count_frames(video) if max_frames > 0 else 0
     decimate = max_frames > 0 and total > max_frames
@@ -157,9 +179,21 @@ def prepare_extract_input(video: Path, input_dir: Path, max_frames: int) -> None
             print(f"[run_capsule] extract on full video ({total} frames)")
         dest.symlink_to(video.resolve())
         return
+
+    n_keyframes = count_keyframes(video)
+    if min_candidates <= n_keyframes <= max_frames:
+        print(f"[run_capsule] decimating {total} -> {n_keyframes} keyframes "
+              f"(I-frames only) for extraction")
+        run_step(
+            "decimate-for-extract",
+            ["ffmpeg", "-y", "-skip_frame", "nokey", "-i", str(video),
+             "-an", "-vsync", "vfr", str(dest)],
+        )
+        return
+
     step = -(-total // max_frames)  # ceil
     print(f"[run_capsule] decimating {total} -> ~{total // step} frames "
-          f"(every {step}th) for extraction")
+          f"(every {step}th; {n_keyframes} keyframes unsuitable) for extraction")
     run_step(
         "decimate-for-extract",
         ["ffmpeg", "-y", "-i", str(video), "-vf", f"select=not(mod(n\\,{step}))",
@@ -190,7 +224,9 @@ def main() -> None:
 
     # `beast extract` only scans a *directory* of videos, so isolate the target
     # video in its own input dir; long videos are decimated to bound RAM.
-    prepare_extract_input(video, input_dir, args.extract_max_frames)
+    prepare_extract_input(
+        video, input_dir, args.extract_max_frames, args.frames_per_video,
+    )
 
     # 1) Extract frames for training.
     run_step(

@@ -44,7 +44,7 @@ extract frames  ->  train ResNet autoencoder  ->  predict per-frame latents
 |------|---------|-------|
 | `--video` | auto-discover | video under `/data` |
 | `--frames-per-video` | 500 | frames used for training (`beast extract -n`) |
-| `--extract-max-frames` | 50000 | decimate long videos to ~this many frames before extract (avoids an OOM in BEAST's frame selection); 0 = full video |
+| `--extract-max-frames` | 50000 | decimate long videos to a bounded candidate pool before extract (avoids an OOM in BEAST's frame selection); 0 = full video. Uses fast keyframe-only decode when possible, else every-Nth full decode (all-intra/sparse-GOP) |
 | `--num-epochs` | 2 | **tiny smoke-test default; raise for real runs** |
 | `--train-batch-size` | config (512) | lower (128/256) if you hit a CUDA OOM |
 | `--batch-size` | 32 | inference batch size |
