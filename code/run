@@ -8,6 +8,8 @@ set -ex
 python -u run_capsule.py \
     --video "/data/behavior_784803_2025-07-03_13-55-13/behavior-videos/bottom_camera.mp4" \
     --frames-per-video 500 \
+    --extract-max-frames 50000 \
     --num-epochs 100 \
     --train-batch-size 128 \
+    --no-reconstructions \
     "$@"

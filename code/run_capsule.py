@@ -51,6 +51,15 @@ def parse_args() -> argparse.Namespace:
         help="Frames extracted for training (beast extract -n).",
     )
     p.add_argument(
+        "--extract-max-frames",
+        type=int,
+        default=50000,
+        help="Cap the number of frames `beast extract` scans. Longer videos are "
+        "temporally decimated to roughly this many frames first, because BEAST "
+        "loads every downsampled frame into RAM and OOMs on long videos. "
+        "0 disables decimation (use the full video).",
+    )
+    p.add_argument(
         "--extraction-method",
         type=str,
         default="pca_kmeans",
@@ -107,6 +116,57 @@ def run_step(name: str, cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
 
 
+def count_frames(video: Path) -> int:
+    """Best-effort frame count via ffprobe (nb_frames, else duration * fps)."""
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=nb_frames,avg_frame_rate,duration",
+             "-of", "default=noprint_wrappers=1:nokey=0", str(video)],
+            capture_output=True, text=True, check=True,
+        ).stdout
+        fields = dict(
+            line.split("=", 1) for line in out.splitlines() if "=" in line
+        )
+        nb = fields.get("nb_frames", "N/A")
+        if nb.isdigit() and int(nb) > 0:
+            return int(nb)
+        num, _, den = fields.get("avg_frame_rate", "0/1").partition("/")
+        fps = float(num) / float(den) if den and float(den) else 0.0
+        return int(fps * float(fields.get("duration", "0") or 0))
+    except (subprocess.CalledProcessError, ValueError, ZeroDivisionError):
+        return 0
+
+
+def prepare_extract_input(video: Path, input_dir: Path, max_frames: int) -> None:
+    """Stage the video for `beast extract`.
+
+    Short videos are symlinked. Long videos are temporally decimated to roughly
+    ``max_frames`` frames first: BEAST's pca_kmeans loads every (downsampled)
+    frame into RAM, so a multi-million-frame video OOM-kills the extract step.
+    Decimation only affects which frames are *candidates* for the training set;
+    inference still runs on the full-resolution original video.
+    """
+    total = count_frames(video) if max_frames > 0 else 0
+    decimate = max_frames > 0 and total > max_frames
+    dest = input_dir / (video.stem + (".mp4" if decimate else video.suffix))
+    if dest.is_symlink() or dest.exists():
+        dest.unlink()
+    if not decimate:
+        if total:
+            print(f"[run_capsule] extract on full video ({total} frames)")
+        dest.symlink_to(video.resolve())
+        return
+    step = -(-total // max_frames)  # ceil
+    print(f"[run_capsule] decimating {total} -> ~{total // step} frames "
+          f"(every {step}th) for extraction")
+    run_step(
+        "decimate-for-extract",
+        ["ffmpeg", "-y", "-i", str(video), "-vf", f"select=not(mod(n\\,{step}))",
+         "-vsync", "vfr", "-an", str(dest)],
+    )
+
+
 def main() -> None:
     args = parse_args()
     video = resolve_video(args)
@@ -122,15 +182,15 @@ def main() -> None:
     input_dir.mkdir(parents=True, exist_ok=True)
     frames_dir.mkdir(parents=True, exist_ok=True)
     model_dir.parent.mkdir(parents=True, exist_ok=True)
-    link = input_dir / video.name
-    if link.is_symlink() or link.exists():
-        link.unlink()
-    link.symlink_to(video.resolve())
 
     print(f"[run_capsule] video       : {video}")
     print(f"[run_capsule] frames_dir  : {frames_dir}")
     print(f"[run_capsule] model_dir   : {model_dir}")
     print(f"[run_capsule] results_dir : {args.results_dir}")
+
+    # `beast extract` only scans a *directory* of videos, so isolate the target
+    # video in its own input dir; long videos are decimated to bound RAM.
+    prepare_extract_input(video, input_dir, args.extract_max_frames)
 
     # 1) Extract frames for training.
     run_step(
