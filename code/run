@@ -2,4 +2,12 @@
 set -ex
 
 # This is the master script for the capsule. When you click "Reproducible Run", the code in this file will execute.
-python -u run_capsule.py "$@"
+# Trains BEAST on the bottom-view camera only. Edit --video for a different
+# session/camera, and --num-epochs for a fuller run. Extra args passed to
+# "Reproducible Run" ("$@") override these defaults.
+python -u run_capsule.py \
+    --video "/data/behavior_784803_2025-07-03_13-55-13/behavior-videos/bottom_camera.mp4" \
+    --frames-per-video 500 \
+    --num-epochs 100 \
+    --train-batch-size 128 \
+    "$@"

@@ -45,6 +45,7 @@ extract frames  ->  train ResNet autoencoder  ->  predict per-frame latents
 | `--video` | auto-discover | video under `/data` |
 | `--frames-per-video` | 500 | frames used for training (`beast extract -n`) |
 | `--num-epochs` | 2 | **tiny smoke-test default; raise for real runs** |
+| `--train-batch-size` | config (512) | lower (128/256) if you hit a CUDA OOM |
 | `--batch-size` | 32 | inference batch size |
 | `--gpus` | config (1) | number of GPUs (do not set 0; see note) |
 | `--no-reconstructions` | off | skip the reconstruction MP4, emit latents only |

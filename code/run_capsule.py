@@ -62,6 +62,13 @@ def parse_args() -> argparse.Namespace:
         default=2,
         help="Training epochs. Tiny by default to prove the loop; raise for real runs.",
     )
+    p.add_argument(
+        "--train-batch-size",
+        type=int,
+        default=None,
+        help="Override training batch size from config. Lower it (e.g. 128/256) "
+        "if you hit a CUDA OOM; the ResNet config defaults to 512.",
+    )
     p.add_argument("--batch-size", type=int, default=32, help="Inference batch size.")
     p.add_argument(
         "--no-reconstructions",
@@ -133,12 +140,15 @@ def main() -> None:
     )
 
     # 2) Train the autoencoder on the extracted frames.
+    overrides = [f"training.num_epochs={args.num_epochs}"]
+    if args.train_batch_size is not None:
+        overrides.append(f"training.train_batch_size={args.train_batch_size}")
     train_cmd = [
         BEAST, "train",
         "-c", str(args.config),
         "-d", str(frames_dir),
         "-o", str(model_dir),
-        "--overrides", f"training.num_epochs={args.num_epochs}",
+        "--overrides", *overrides,
     ]
     if args.gpus is not None:
         train_cmd += ["--gpus", str(args.gpus)]
