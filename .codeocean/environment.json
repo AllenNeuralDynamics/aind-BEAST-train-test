@@ -1,9 +1,0 @@
-{
-	"version": 1,
-	"base_image": "codeocean/miniconda3:4.9.2-cuda11.7.0-cudnn8-ubuntu20.04",
-	"options": {
-		"registry_host_arg": true,
-		"git_ask_pass": true,
-		"mount_secrets": true
-	}
-}
