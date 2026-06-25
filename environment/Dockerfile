@@ -36,3 +36,10 @@ RUN git clone https://github.com/paninski-lab/beast.git /opt/beast \
 # assets; pandas/scikit-learn ship with BEAST but are pinned here so the
 # notebook runs regardless of upstream dependency changes.
 RUN pip install --no-cache-dir jupyterlab matplotlib pandas scikit-learn pyarrow
+
+# Video time-base alignment helpers (session_time <-> video_time <-> behavior_time)
+# used by analyze_latents.ipynb to map keypoint event tables onto latent frames.
+# Zero runtime deps (pandas only). Pinned to the video_alignment feature branch
+# commit; revisit once it merges to main.
+RUN pip install --no-cache-dir \
+    "git+https://github.com/AllenNeuralDynamics/aind-dynamic-foraging-behavior-video-analysis.git@640cdca3ea170eccbffe6e327454341454d3f2f1"
