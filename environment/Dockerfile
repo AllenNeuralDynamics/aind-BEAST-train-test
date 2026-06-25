@@ -32,6 +32,7 @@ RUN git clone https://github.com/paninski-lab/beast.git /opt/beast \
 # Dockerfile blocks CO's automatic IDE install (-> "jupyter: command not found",
 # "JupyterLab interactive session port not exposed"), so install it explicitly.
 # matplotlib is needed by code/analyze_latents.ipynb and isn't a BEAST dep;
-# pandas/scikit-learn ship with BEAST but are pinned here so the notebook runs
-# regardless of upstream dependency changes.
-RUN pip install --no-cache-dir jupyterlab matplotlib pandas scikit-learn
+# pyarrow lets pandas read the processed .parquet keypoint/kinematics/event
+# assets; pandas/scikit-learn ship with BEAST but are pinned here so the
+# notebook runs regardless of upstream dependency changes.
+RUN pip install --no-cache-dir jupyterlab matplotlib pandas scikit-learn pyarrow
