@@ -27,3 +27,11 @@ ARG BEAST_COMMIT=2e56b117fb5457e6f436906789ed75d1764bf47b
 RUN git clone https://github.com/paninski-lab/beast.git /opt/beast \
     && git -C /opt/beast checkout ${BEAST_COMMIT} \
     && pip install -e /opt/beast
+
+# JupyterLab so Code Ocean Cloud Workstations can launch. This hand-edited
+# Dockerfile blocks CO's automatic IDE install (-> "jupyter: command not found",
+# "JupyterLab interactive session port not exposed"), so install it explicitly.
+# matplotlib is needed by code/analyze_latents.ipynb and isn't a BEAST dep;
+# pandas/scikit-learn ship with BEAST but are pinned here so the notebook runs
+# regardless of upstream dependency changes.
+RUN pip install --no-cache-dir jupyterlab matplotlib pandas scikit-learn
