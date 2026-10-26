@@ -19,9 +19,10 @@ Goal: an unsupervised per-frame embedding to pair with Lightning Pose keypoints.
   - **Movement-locked:** peri-onset averages aligned to `tongue_movs` onsets show
     latent speed `||Δz||` peaking exactly at onset, with a dim-selective subspace
     (z0/z3 +, z6/z8/z10 −) and rhythmic side-bands at the lick interval.
-  - **Time-base alignment solved:** session_time→behavior_time→frame via the
-    upstream `video_alignment` module + per-frame `Behav_Time` from
-    `bottom_camera.csv` (exact, no fps assumption). Keypoint-speed peak at frame 0
+  - **Time-base alignment solved:** session_time→behavior_time→frame via
+    `video_alignment.behavior_time_to_frame_index` on the corrected per-frame
+    Harp time from `video_timing_qc` (exact, no fps assumption; the raw CSV
+    `Behav_Time` is late after dropped frames). Keypoint-speed peak at frame 0
     confirms it.
 - **Conclusion:** latents are behaviorally meaningful → green light for the
   multi-session backbone.
