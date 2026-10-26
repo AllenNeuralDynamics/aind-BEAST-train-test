@@ -37,9 +37,8 @@ RUN git clone https://github.com/paninski-lab/beast.git /opt/beast \
 # notebook runs regardless of upstream dependency changes.
 RUN pip install --no-cache-dir jupyterlab matplotlib pandas scikit-learn pyarrow
 
-# Video time-base alignment helpers (session_time <-> video_time <-> behavior_time)
-# used by analyze_latents.ipynb to map keypoint event tables onto latent frames.
-# Zero runtime deps (pandas only). Pinned to the video_alignment feature branch
-# commit; revisit once it merges to main.
+# Video timing QC (corrected per-frame Harp time) and behavior_time -> frame
+# index, used by analyze_latents.ipynb to map keypoint event tables onto latent
+# frames. Core install only (numpy, pandas). Pinned to v0.4.0.
 RUN pip install --no-cache-dir \
-    "git+https://github.com/AllenNeuralDynamics/aind-dynamic-foraging-behavior-video-analysis.git@640cdca3ea170eccbffe6e327454341454d3f2f1"
+    "git+https://github.com/AllenNeuralDynamics/aind-dynamic-foraging-behavior-video-analysis.git@a6bac04805203413b876acf1d8b6509a28c66760"
